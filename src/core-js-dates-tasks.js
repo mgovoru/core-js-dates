@@ -53,7 +53,9 @@ function getTime(date) {
  */
 function getDayName(date) {
   const dateCurrent = new Date(date);
-  const dateLocal = new Date(dateCurrent.getTime() - 3 * 3600 * 1000);
+  const localDate = new Date();
+  const offset = localDate.getTimezoneOffset() * 60000;
+  const dateLocal = new Date(dateCurrent.getTime() + offset);
   const index = dateLocal.getDay();
   const array = [
     'Sunday',
@@ -79,12 +81,17 @@ function getDayName(date) {
  * Date('2024-02-16T00:00:00Z') => Date('2024-02-23T00:00:00Z')
  */
 function getNextFriday(date) {
-  const dateLocal = new Date(date.getTime());
+  const dateCurrent = new Date(date);
+  const localDate = new Date();
+  const offset = localDate.getTimezoneOffset() * 60000;
+  const dateLocal = new Date(dateCurrent.getTime() + offset);
   const daystoFriday =
     5 - dateLocal.getDay() > 0
       ? 5 - dateLocal.getDay()
       : 12 - dateLocal.getDay();
-  return new Date(dateLocal.getTime() + daystoFriday * 24 * 3600 * 1000);
+  return new Date(
+    dateLocal.getTime() + daystoFriday * 24 * 3600 * 1000 - offset
+  );
 }
 
 /**
@@ -213,22 +220,35 @@ function getCountWeekendsInMonth(month, year) {
  */
 function getWeekNumberByDate(date) {
   const year = date.getFullYear();
-  const month = date.getMonth();
-  const array = [];
-  let week = 0;
-  if (month === 0 && date.getDate() <= 6) {
-    week = 1;
+  let newBeginDay = new Date(year, 0, 1);
+  const localDate = new Date();
+  const offset = localDate.getTimezoneOffset() * 60000;
+  const dateNew = new Date(date.getTime() - offset);
+  newBeginDay = new Date(newBeginDay.getTime() - offset);
+  let count = 0;
+  let restBegin = 0;
+  let restEnd = 0;
+  if (newBeginDay.getUTCDay() !== 0) {
+    count = 1;
+    restBegin = 7 - newBeginDay.getUTCDay();
+  } else {
+    count = 1;
+    restBegin += 1;
   }
-  for (let i = 0; i <= month; i += 1) {
-    for (let j = 1; j <= new Date(year, i + 1, 0).getDate(); j += 1) {
-      const dateDay = new Date(year, i, j).getTime() + 5 * 3600 * 1000;
-      array.push(new Date(dateDay));
-    }
+  if (dateNew.getUTCDay() !== 0) {
+    count += 1;
+    restEnd = dateNew.getUTCDay();
+  } else {
+    count += 1;
+    restEnd = 0;
   }
-  const sundays = array
-    .filter((el) => el.getTime() <= date.getTime() + 5 * 3600 * 1000)
-    .filter((el) => el.getDay() === 1).length;
-  return sundays + week;
+  const countWeek = Math.floor(
+    (dateNew.getTime() -
+      newBeginDay.getTime() -
+      (restBegin + restEnd) * 24 * 3600 * 1000) /
+      (7 * 24 * 3600 * 1000)
+  );
+  return count + countWeek;
 }
 
 /**
@@ -242,8 +262,28 @@ function getWeekNumberByDate(date) {
  * Date(2024, 0, 13) => Date(2024, 8, 13)
  * Date(2023, 1, 1) => Date(2023, 9, 13)
  */
-function getNextFridayThe13th(/* date */) {
-  throw new Error('Not implemented');
+function getNextFridayThe13th(date) {
+  const dateNew = new Date(date.getTime());
+  const restDay = 5 - dateNew.getDay();
+  let nextFriday;
+  if (dateNew.getDay() !== 0) {
+    if (restDay >= 1) {
+      nextFriday = restDay;
+    } else if (restDay === -1) {
+      nextFriday = 6;
+    }
+  } else {
+    nextFriday = 5;
+  }
+
+  let nextFridayDay = new Date(
+    dateNew.getTime() + nextFriday * 24 * 3600 * 1000
+  );
+
+  while (nextFridayDay.getDate() !== 13) {
+    nextFridayDay = new Date(nextFridayDay.getTime() + 7 * 24 * 3600 * 1000);
+  }
+  return new Date(nextFridayDay.getTime());
 }
 
 /**
